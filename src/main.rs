@@ -8,8 +8,11 @@ mod clapargs;
 mod cli_app;
 
 use azure_ost_core::{AzureOptions, BGMOptions, ExportMode};
+use ::azure_ost_core::selector::Selector;
 
 use std::path::PathBuf;
+
+use std::str::FromStr;
 
 fn main() {
     setup_panic!();
@@ -18,15 +21,38 @@ fn main() {
         .unwrap_or_else(|| argument_fail("sqpack"));
     let threads = matches.value_of("threads")
         .map(|thread_str| {
-            use std::str::FromStr;
+
             usize::from_str(thread_str)
         })
         .unwrap_or(Ok(num_cpus::get()))
         .unwrap_or_else(|_| argument_fail("threads"));
+    let subcommand = matches.subcommand_name().unwrap_or_else(|| {
+        println!("No subcommand specified.");
+        std::process::exit(0);
+    });
     AzureOptions::new(PathBuf::from(sqpack), threads)
         .and_then(|azure_options| {
-            matches.subcommand_matches("all")
-                .map(|subc_matches| main_all(subc_matches, azure_options));
+            match subcommand {
+                "all" => {
+                    let subc_matches = matches.subcommand_matches("all")
+                        .expect("all subcommand was specified but Option was None!");
+                    main_all(subc_matches, azure_options);
+                },
+                "one" => {
+                    let subc_matches = matches.subcommand_matches("one")
+                        .expect("one subcommand was specified but Option was None!");
+                    main_one(subc_matches, azure_options);
+                },
+                "util" => {
+                    let subc_matches = matches.subcommand_matches("util")
+                        .expect("one subcommand was specified but Option was None!");
+                    main_util(subc_matches, azure_options);
+                }
+                other => {
+                    eprintln!("Unknown subcommand: {}", other);
+                    std::process::exit(1);
+                }
+            }
             Ok(())
         })
         .unwrap_or_else(|_| {
@@ -38,14 +64,68 @@ fn main() {
 //    matches.subcommand_matches("")
 }
 
+fn main_util(subc_matches: &clap::ArgMatches, azure_options: AzureOptions) {
+    let util_subcommand = subc_matches.subcommand_name()
+        .unwrap_or_else(|| {
+            println!("No subcommand specified.");
+            std::process::exit(0);
+        });
+    match util_subcommand {
+        "bgm-csv" => {
+            let bgm_csv_matches = subc_matches.subcommand_matches("bgm-csv")
+                .expect("bgm-csv subcommand was specified but Option was None!");
+            let csv_out = bgm_csv_matches.value_of("csv-file")
+                .unwrap_or_else(|| {
+                    argument_fail("csv-out");
+                });
+            let csv_pathbuf = PathBuf::from(csv_out);
+            azure_ost_core::bgm_csv(azure_options, csv_pathbuf)
+                .unwrap_or_else(|err| {
+                    eprintln!("An error occurred while creating the BGM CSV.");
+                    use azure_ost_core::errors::AzureError;
+                    match err {
+                        AzureError::UnableToCreateSaveFile => {
+                            eprintln!("The error occurred when trying to write or create the file.");
+                        },
+                        AzureError::FFXIVError(ff_err) => {
+                            eprintln!("The error occurred when interfacing with the FFXIV data: {:?}", ff_err);
+                        },
+                        err => {
+                            eprintln!("An unknown error occurred: {:?}", err);
+                        }
+                    }
+                    std::process::exit(-1);
+                });
+            println!("Wrote BGM CSV to {}", csv_out);
+            std::process::exit(0);
+        },
+        other => {
+            eprintln!("Unknown subcommand: {}", other);
+            std::process::exit(1);
+        }
+    }
+}
+
+fn main_one(subc_matches: &clap::ArgMatches, azure_options: AzureOptions) {
+    let name = subc_matches.value_of("name");
+    let index = subc_matches.value_of("index");
+    let selected = option_name_index(name, index);
+    let bgm_options = get_bgm_options(subc_matches);
+    println!("Beginning to process selected file...");
+
+    azure_ost_core::process_one(selected.as_ref(), azure_options, bgm_options, cli_app::create().as_ref())
+        .unwrap_or_else(|err| {
+            eprintln!("An error occurred while attempting to process. {:?}", err);
+            std::process::exit(-1);
+        });
+
+}
+
 fn main_all(subc_matches: &clap::ArgMatches, azure_options: AzureOptions) {
 
     let bgm_options = get_bgm_options(subc_matches);
     println!("Beginning to process all files...");
     azure_ost_core::process_all(azure_options, bgm_options, cli_app::create().as_ref())
-        .map(|_| {
-            ()
-        })
         .unwrap_or_else(|err| {
             eprintln!("An error occurred while attempting to process. {:?}", err);
             std::process::exit(-1);
@@ -107,6 +187,24 @@ fn option_exports_into_mode(emp3: Option<&str>, eogg: Option<&str>) -> Option<Ex
     } else {
         None
     }
+}
+
+fn option_name_index(name: Option<&str>, index: Option<&str>) -> Box<Selector> {
+    let name = name.map(String::from);
+    let index = index.map(usize::from_str);
+    if name.is_some() {
+        Box::new(name.expect("Checked if name was some but was not some!"))
+    } else if index.is_some() {
+        let index_res = index.expect("Checked if index was some but was not some!");
+        let s_index = index_res.unwrap_or_else(|_| {
+            argument_fail("index");
+        });
+        Box::new(s_index)
+    } else {
+        eprintln!("Neither name nor index was specified!");
+        std::process::exit(1);
+    }
+
 }
 
 fn argument_fail(arg: &str) -> ! {

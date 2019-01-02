@@ -6,7 +6,7 @@ struct CLIOutput {
     pub progress_bar: Option<ProgressBar>
 }
 
-struct CLICallbacks {
+pub struct CLICallbacks {
     output: RefCell<CLIOutput>,
 }
 
@@ -19,6 +19,7 @@ impl CLICallbacks {
 fn get_pb_style() -> ProgressStyle {
     ProgressStyle::default_bar()
         .template("[{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({eta})")
+        .progress_chars("##-")
 }
 
 impl AzureCallbacks for CLICallbacks {
@@ -46,7 +47,9 @@ impl AzureCallbacks for CLICallbacks {
             self.output.borrow().progress_bar.as_ref().unwrap().set_position(0);
         } else {
             self.output.borrow_mut().progress_bar = Some(ProgressBar::new(info.total_operations_count as u64));
-            self.output.borrow_mut().progress_bar.as_ref().unwrap().set_style(get_pb_style());
+            self.output.borrow().progress_bar.as_ref().unwrap().set_style(get_pb_style());
+            self.output.borrow().progress_bar.as_ref().unwrap().enable_steady_tick(500);
+
         }
     }
     fn process_progress(&self, info: AzureProcessProgress) {
