@@ -3,6 +3,7 @@ extern crate clap;
 extern crate human_panic;
 extern crate azure_ost_core;
 extern crate indicatif;
+extern crate ctrlc;
 
 mod clapargs;
 mod cli_app;
@@ -16,6 +17,14 @@ use std::str::FromStr;
 
 fn main() {
     setup_panic!();
+    ctrlc::set_handler(move || {
+        println!("Termination requested.");
+        std::process::exit(100);
+    }).expect("Unable to hook SIGTERM.");
+    main_inner();
+}
+
+fn main_inner() {
     let matches = clapargs::get_clap_app().get_matches();
     let sqpack = matches.value_of("sqpack")
         .unwrap_or_else(|| argument_fail("sqpack"));
