@@ -1,0 +1,11 @@
+target/**/*
+target/**/.*
+ignore/**/*
+**/*.rs.bk
+**/*.dat
+**/Cargo.lock
+**/*.exd
+**/*.exh
+**/*.zlib
+.idea/**/*
+*.iml
