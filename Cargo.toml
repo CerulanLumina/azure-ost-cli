@@ -19,4 +19,5 @@ vorbis-sys = "0.0.8"
 [dependencies.azure-ost-core]
 git = "https://github.com/CerulanLumina/azureost-core-rs"
 branch = "master"
-version = "0.1.14"
+version = "0.1.15"
+#path = "../azureost-core-rs"

@@ -60,8 +60,8 @@ checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
 
 [[package]]
 name = "azure-ost-core"
-version = "0.1.14"
-source = "git+https://github.com/CerulanLumina/azureost-core-rs?branch=master#cfa3087570307f4faae2b4c936c863404392a4a7"
+version = "0.1.15"
+source = "git+https://github.com/CerulanLumina/azureost-core-rs?branch=master#b013dcd4de7e16275d8af1f8eb4dcd8e1911aaaf"
 dependencies = [
  "fallible-iterator",
  "lame",
@@ -676,8 +676,8 @@ checksum = "1ecab6c735a6bb4139c0caafd0cc3635748bbb3acf4550e8138122099251f309"
 
 [[package]]
 name = "sqpack_blue"
-version = "0.0.10"
-source = "git+https://github.com/CerulanLumina/sqpack-blue?branch=dev#31b0e704141993ac65f59ce44d20a8719c785636"
+version = "0.0.11"
+source = "git+https://github.com/CerulanLumina/sqpack-blue?branch=dev#ca1e0d151ca17b5a4aed6cd9ce588bbe777fee8a"
 dependencies = [
  "byteorder",
  "flate2",
